@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA Meta -->
+  <meta name="theme-color" content="#4CAF50">
+  <link rel="manifest" href="manifest.json">
+
+  <title>Learn Indonesian App</title>
+
+  <style>
+    body { font-family: Arial; margin:0; background:#f5f7fa; }
+
+    header {
+      background:#4CAF50;
+      color:white;
+      text-align:center;
+      padding:15px;
+      font-size:20px;
+    }
+
+    .container { padding:15px; }
+
+    .tabbar {
+      position:fixed;
+      bottom:0;
+      width:100%;
+      display:flex;
+      background:white;
+      border-top:1px solid #ddd;
+    }
+
+    .tabbar button {
+      flex:1;
+      padding:12px;
+      border:none;
+      background:white;
+      font-size:14px;
+    }
+
+    .active { color:#4CAF50; font-weight:bold; }
+
+    .card-container {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .card {
+      background:white;
+      padding:20px;
+      border-radius:12px;
+      text-align:center;
+      box-shadow:0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .english { display:none; margin-top:8px; color:#555; }
+
+    .quiz { display:none; }
+
+    .options button {
+      width:100%;
+      margin:8px 0;
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:#2196F3;
+      color:white;
+    }
+
+    .correct { background:#4CAF50 !important; }
+    .wrong { background:#f44336 !important; }
+
+    .next { width:100%; padding:12px; margin-top:10px; background:#333; color:white; border:none; border-radius:10px; display:none; }
+
+    .review { display:none; }
+    .sentence { display:block; margin-top:5px; color:#555; }
+    .translation { display:none; font-size:13px; color:#888; }
+
+    footer { height:60px; }
+  </style>
+</head>
+<body>
+
+<header>🌤️ Learn Indonesian</header>
+
+<div class="container">
+
+  <div id="cards" class="card-container"></div>
+
+  <div id="quiz" class="quiz">
+    <div id="qtext"></div>
+    <div class="options" id="options"></div>
+    <button class="next" id="nextBtn" onclick="nextQ()">Next</button>
+  </div>
+
+  <div id="review" class="review"></div>
+
+</div>
+
+<footer></footer>
+
+<div class="tabbar">
+  <button onclick="showTab('cards')" id="tab1" class="active">📚</button>
+  <button onclick="startQuiz()" id="tab2">🧠</button>
+  <button onclick="showTab('review')" id="tab3">🔁</button>
+</div>
+
+<script>
+const vocab=[
+{ind:"panas",eng:"hot",sen:"Hari ini sangat panas.",trans:"Today is very hot."},
+{ind:"dingin",eng:"cold",sen:"Udara pagi ini dingin.",trans:"Morning air is cold."},
+{ind:"hujan",eng:"rain",sen:"Sekarang hujan.",trans:"It is raining."},
+{ind:"cerah",eng:"sunny",sen:"Hari ini cerah.",trans:"It is sunny."}
+];
+
+let list=[],i=0,wrong=[],current;
+
+const cards=document.getElementById('cards');
+
+vocab.forEach(w=>{
+ let c=document.createElement('div');c.className='card';
+ let i1=document.createElement('div');i1.textContent=w.ind;
+ let e=document.createElement('div');e.className='english';e.textContent=w.eng;
+ c.appendChild(i1);c.appendChild(e);
+ c.onclick=()=>e.style.display=e.style.display==='none'?'block':'none';
+ cards.appendChild(c);
+});
+
+function showTab(tab){
+ document.getElementById('cards').style.display=tab==='cards'?'grid':'none';
+ document.getElementById('quiz').style.display='none';
+ document.getElementById('review').style.display=tab==='review'?'block':'none';
+}
+
+function startQuiz(){
+ showTab('quiz');
+ document.getElementById('quiz').style.display='block';
+ list=[...vocab].sort(()=>Math.random()-0.5);
+ i=0;wrong=[];
+ nextQ();
+}
+
+function nextQ(){
+ if(i>=list.length){showReview();return;}
+ current=list[i];
+ document.getElementById('qtext').textContent=current.ind;
+ let opts=[current.eng];
+ while(opts.length<3){let r=vocab[Math.floor(Math.random()*vocab.length)].eng;if(!opts.includes(r))opts.push(r);} 
+ opts.sort(()=>Math.random()-0.5);
+
+ let box=document.getElementById('options');box.innerHTML='';
+ document.getElementById('nextBtn').style.display='none';
+
+ opts.forEach(o=>{
+  let b=document.createElement('button');b.textContent=o;
+  b.onclick=()=>{
+   document.querySelectorAll('.options button').forEach(x=>x.disabled=true);
+   if(o===current.eng){b.classList.add('correct');}
+   else{
+    b.classList.add('wrong');
+    wrong.push(current);
+    document.querySelectorAll('.options button').forEach(x=>{if(x.textContent===current.eng)x.classList.add('correct');});
+   }
+   i++;document.getElementById('nextBtn').style.display='block';
+  };
+  box.appendChild(b);
+ });
+}
+
+function showReview(){
+ showTab('review');
+ let r=document.getElementById('review');
+ r.innerHTML='Review:<br>' + wrong.map((w,idx)=>`
+ ${w.ind}=${w.eng}<br>
+ <span onclick="toggle(${idx})">${w.sen}</span>
+ <div id="t${idx}" class="translation">${w.trans}</div>
+ `).join('<br>');
+}
+
+function toggle(i){
+ let el=document.getElementById('t'+i);
+ el.style.display=el.style.display==='none'?'block':'none';
+ let u=new SpeechSynthesisUtterance(el.previousElementSibling.textContent);
+ u.lang='id-ID';speechSynthesis.speak(u);
+}
+
+// Register service worker
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('sw.js');
+}
+</script>
+
+</body>
+</html>
